@@ -147,7 +147,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
   <nav class="plate" id="bar" aria-label="Orders" hidden>
     <div class="grp" role="group" aria-label="Map tool">
       <button id="tMove" aria-pressed="true" title="Move tool: drag a unit to send it, drag the map to pan">Move</button>
-      <button id="tBox" aria-pressed="false" title="Box select (or Shift+drag)">Box</button>
+      <button id="tBox" aria-pressed="false" title="Drag a box round units to select them (or Shift+drag)">Box</button>
       <button id="tLine" aria-pressed="false" title="Draw a front line for the selected units (or right-drag)">Line</button>
     </div>
     <div class="sep"></div>
@@ -176,7 +176,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
     <p id="briefText"></p>
     <ul id="briefList">
       <li>Drag your dots to position them. Spend your 4 reserves with <b>+ Inf</b> and <b>+ Armor</b>.</li>
-      <li>In battle, drag a unit (or a selected group) to order a move. <b>Line</b> or right-drag spreads selected units along a front you draw.</li>
+      <li><b>Moving troops:</b> select units (tap one, <b>Box</b> to drag a box round several, or <b>All</b>). Then either drag any selected unit to where it should go (the group keeps its formation), tap the map to send the group there, or press <b>Line</b> and draw a front: each unit takes the nearest spot on it. A cross marks each selected unit's destination.</li>
       <li>Units take ground around them. Troops cut off from their own map edges and HQ wither. Water is impassable.</li>
       <li>Drag a unit in a straight line and it plans its own route; drag in a curve and it follows the route you drew.</li>
       <li>Orders route around water, rough ground and enemy troops. Troops marching on roads move 60% faster (armor 90%), so long moves follow the road network. Forest, hills, mountains, marsh and cities slow troops (armor most) and protect defenders; hills give the high ground. Hover over the map to see the ground.</li>
@@ -875,9 +875,16 @@ function orderLine(pts){
   const seg=[0];for(let k=1;k<pts.length;k++)seg.push(seg[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));
   const len=seg[seg.length-1];if(len<3*K)return;
   const a=pts[0],b=pts[pts.length-1],dx=b[0]-a[0],dy=b[1]-a[1];
+  const slots=grp.map((_,k)=>{const d=(k+.5)/grp.length*len;let s=1;while(s<seg.length-1&&seg[s]<d)s++;
+    const t=(d-seg[s-1])/((seg[s]-seg[s-1])||1);return [pts[s-1][0]+(pts[s][0]-pts[s-1][0])*t,pts[s-1][1]+(pts[s][1]-pts[s-1][1])*t];});
+  // each unit takes the nearest free spot: start in order along the line, then swap pairs while that shortens the marches (no crossing paths)
   grp.sort((u,v)=>(u.x*dx+u.y*dy)-(v.x*dx+v.y*dy));
-  grp.forEach((u,k)=>{const d=(k+.5)/grp.length*len;let s=1;while(s<seg.length-1&&seg[s]<d)s++;
-    const t=(d-seg[s-1])/((seg[s]-seg[s-1])||1);placeOrMove(u,pts[s-1][0]+(pts[s][0]-pts[s-1][0])*t,pts[s-1][1]+(pts[s][1]-pts[s-1][1])*t);});
+  const d2=(u,q)=>Math.hypot(u.x-q[0],u.y-q[1]),as=grp.map((_,k)=>k);
+  for(let pass=0,better=true;better&&pass<50;pass++){better=false;
+    for(let i=0;i<grp.length;i++)for(let j=i+1;j<grp.length;j++){
+      if(d2(grp[i],slots[as[j]])+d2(grp[j],slots[as[i]])<d2(grp[i],slots[as[i]])+d2(grp[j],slots[as[j]])-1e-6){[as[i],as[j]]=[as[j],as[i]];better=true;}}}
+  grp.forEach((u,k)=>placeOrMove(u,slots[as[k]][0],slots[as[k]][1]));
+  G.lastLine={pts,t:performance.now()};
   toast(`${grp.length} unit${grp.length>1?"s":""} ordered onto the line`);
 }
 function orderAir(x,y){
@@ -1100,6 +1107,10 @@ function drawBattle(now){
     ctx.strokeStyle=s?"rgba(201,37,44,.9)":"rgba(201,37,44,.35)";ctx.lineWidth=s?1.6:1;
     ctx.beginPath();ctx.moveTo(sx(u.x),sy(u.y));for(const p of u.path)ctx.lineTo(sx(p[0]),sy(p[1]));ctx.stroke();}
   ctx.setLineDash([]);
+  if(G.lastLine){const a=1-(performance.now()-G.lastLine.t)/2500;if(a<=0)G.lastLine=null;else{ctx.strokeStyle=`rgba(201,37,44,${0.6*a})`;ctx.lineWidth=4;ctx.beginPath();
+    G.lastLine.pts.forEach((p,k)=>k?ctx.lineTo(sx(p[0]),sy(p[1])):ctx.moveTo(sx(p[0]),sy(p[1])));ctx.stroke();}}
+  for(const u of G.units){if(u.side!==RED||!u.path||!G.sel.has(u.id))continue;const x=sx(u.tx),y=sy(u.ty);
+    ctx.strokeStyle="#C9252C";ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(x-4,y-4);ctx.lineTo(x+4,y+4);ctx.moveTo(x+4,y-4);ctx.lineTo(x-4,y+4);ctx.stroke();}
   for(const f of G.fx){const x=sx(f.x),y=sy(f.y);
     if(f.k==="bomb"){const a=1-f.t/0.8;ctx.fillStyle=`rgba(230,120,40,${a})`;ctx.beginPath();ctx.arc(x,y,3+f.t*14,0,7);ctx.fill();ctx.fillStyle=`rgba(60,50,40,${a*0.6})`;ctx.beginPath();ctx.arc(x,y-f.t*10,2+f.t*10,0,7);ctx.fill();}
     else if(f.k==="flak"){ctx.fillStyle=`rgba(28,30,26,${0.7-f.t})`;ctx.beginPath();ctx.arc(x+(f.t*20),y-f.t*12,2+f.t*6,0,7);ctx.fill();}
@@ -1193,9 +1204,12 @@ function endPtr(e){
     else if(g.was&&!g.shift){G.sel.clear();G.sel.add(g.unit.id);}
   }else if(g.type==="box"){
     const x0=Math.min(g.ax,g.bx),x1=Math.max(g.ax,g.bx),y0=Math.min(g.ay,g.by),y1=Math.max(g.ay,g.by);
-    if(!g.add)G.sel.clear();for(const u of own()){const x=sx(u.x),y=sy(u.y);if(x>=x0&&x<=x1&&y>=y0&&y<=y1)G.sel.add(u.id);}
+    if(x1-x0<8&&y1-y0<8){if(G.sel.size&&G.phase!=="over")orderGroup(null,wx(px),wy(py));}
+    else{if(!g.add)G.sel.clear();for(const u of own()){const x=sx(u.x),y=sy(u.y);if(x>=x0&&x<=x1&&y>=y0&&y<=y1)G.sel.add(u.id);}
+      if(tool==="box"){setTool("move");if(G.sel.size)toast(`${G.sel.size} selected: drag one to move them together, tap the map to send them, or press Line to spread them along a front`);}}
   }else if(g.type==="line"){
     if(g.moved)orderLine(g.pts);else if(G.sel.size)orderGroup(null,wx(px),wy(py));
+    if(tool==="line")setTool("move");
   }else if(g.type==="pan"&&!g.moved){
     if(G.airMode)orderAir(wx(px),wy(py));else if(G.placing)tryPlace(wx(px),wy(py));else if(G.sel.size&&G.phase!=="over")orderGroup(null,wx(px),wy(py));
   }
@@ -1227,7 +1241,7 @@ $("bBack").onclick=()=>toPicker();
 $("bDeploy").onclick=()=>{APP="game";newBattle();showScreen();territoryFrom(G.owner);showBrief("Deployment",null);syncUI();};
 function setTool(t){tool=t;if(G)G.placing=null;for(const [id,v] of [["tMove","move"],["tBox","box"],["tLine","line"]])$(id).setAttribute("aria-pressed",String(t===v));syncUI();}
 function setSpeed(s){G.speed=s;G.paused=false;syncUI();}
-$("tMove").onclick=()=>setTool("move");$("tBox").onclick=()=>setTool("box");$("tLine").onclick=()=>{setTool("line");if(!G.sel.size)toast("Select units first, then draw their line");};
+$("tMove").onclick=()=>setTool("move");$("tBox").onclick=()=>setTool("box");$("tLine").onclick=()=>{setTool("line");toast(G.sel.size?"Now draw the front line you want them to hold":"Select units first, then draw their line");};
 $("bPause").onclick=()=>{G.paused=!G.paused;syncUI();};
 $("bS1").onclick=()=>setSpeed(1);$("bS2").onclick=()=>setSpeed(2);$("bS4").onclick=()=>setSpeed(4);
 $("bAll").onclick=()=>{G.sel=new Set(own().map(u=>u.id));syncUI();};
@@ -1264,7 +1278,7 @@ window.addEventListener("keydown",e=>{
   else if(e.key==="l"||e.key==="L")setTool(tool==="line"?"move":"line");
   else if(e.key==="b"||e.key==="B")setTool(tool==="box"?"move":"box");
 });
-let toastT=0;function toast(s){const t=$("toast");t.textContent=s;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2000);}
+let toastT=0;function toast(s){const t=$("toast");t.textContent=s;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),Math.max(2000,s.length*45));}
 function syncUI(){
   if(!G)return;
   $("bPause").setAttribute("aria-pressed",String(G.paused));
