@@ -186,6 +186,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
       <li>Drag your dots to position them. Spend your 4 reserves with <b>+Inf</b> and <b>+Arm</b>.</li>
       <li><b>Moving troops:</b> select units (tap one, <b>Box</b> to drag a box round several, or <b>All</b>). Then either drag any selected unit to where it should go (the group keeps its formation), tap the map to send the group there, or press <b>Line</b> and draw a front: each unit takes the nearest spot on it. A cross marks each selected unit's destination.</li>
       <li><b>Defence lines:</b> select units, press <b>Dig</b> (<kbd>D</kbd>) and draw a line on the map: the selected units spread out along it and dig a trench that follows your line. Press <b>Dig</b> twice instead to dig in where they stand (or where they arrive). Trenches grow while the unit is still and out of combat (about half a minute for infantry; armor digs slowly). Troops in their own trenches take up to 45% less damage, and enemies crossing them are slowed. Fighting and bombing wreck trenches, and captured ones are only half as good. The longer the stretch each unit has to dig, the slower it goes; planned trench shows as a dashed line until work starts. You can draw defence lines during deployment too.</li>
+      <li><b>Breaking off a fight:</b> troops in contact can't push straight through an enemy, but you can always order them back or sideways. Withdrawing units move faster than attackers.</li>
       <li>Units take ground around them. Troops cut off from their own map edges and HQ wither. Water is impassable.</li>
       <li>Drag a unit in a straight line and it plans its own route; drag in a curve and it follows the route you drew.</li>
       <li>Orders route around water, rough ground and enemy troops. Troops marching on roads move 60% faster (armor 90%), so long moves follow the road network. Forest, hills, mountains, marsh and cities slow troops (armor most) and protect defenders; hills give the high ground. Hover over the map to see the ground.</li>
@@ -669,10 +670,12 @@ function step(dt){
     if(d<0.25*K){u.path.shift();continue;}
     const c=cellOf(u.x,u.y);
     const sp=T[u.type].speed*K*spdF(u.type,c)*(M.river[c]?0.45:1)*(G.owner[c]!==u.side?0.75:1)*(u.eng?0.4:1)*(u.sup?1:0.7)*(1-0.45*obstacle(u));
-    const s=Math.min(d,sp*dt),nx=u.x+dx/d*s,ny=u.y+dy/d*s;
+    // in contact: pulling back is quicker than pushing on, and only a foe straight ahead stops the move (sidesteps and withdrawals always work)
+    let ahead=0;for(const v of u.foes){const fx=v.x-u.x,fy=v.y-u.y,fd=Math.hypot(fx,fy)||1;ahead=Math.max(ahead,(fx*dx+fy*dy)/(fd*d));}
+    const s=Math.min(d,sp*dt*(u.eng&&u.side===RED&&ahead<0.2?1.75:1)),nx=u.x+dx/d*s,ny=u.y+dy/d*s;
     if(M.water[cellOf(nx,ny)]){setOrder(u,u.tx,u.ty);continue;}
     let blocked=false;
-    for(const v of u.foes){const d0=Math.hypot(u.x-v.x,u.y-v.y),d1=Math.hypot(nx-v.x,ny-v.y);if(d1<CONTACT*K&&d1<d0){blocked=true;break;}}
+    for(const v of u.foes){const fx=v.x-u.x,fy=v.y-u.y,d0=Math.hypot(fx,fy)||1,d1=Math.hypot(nx-v.x,ny-v.y);if(d1<CONTACT*K&&d1<d0&&(u.side===BLK||(fx*dx+fy*dy)/(d0*d)>0.25)){blocked=true;break;}}
     if(!blocked){u.x=clampX(nx);u.y=clampY(ny);}
   }
   const V=G.units,SP=2.4*K;
