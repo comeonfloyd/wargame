@@ -18,7 +18,7 @@ With GitHub Pages turned on for this repository, it is playable at `https://come
 - Draw the opening front freehand; swap sides.
 - Infantry and armor divisions take ground around them; front lines redraw live. Encircled troops lose strength; empty pockets collapse.
 - Easy / Normal / Hard opponent.
-- Dig in (D): units build trench lines across the front that cut the damage they take and slow attackers. Fighting and bombing wreck them.
+- Dig in (D): draw a defence line and the selected units spread along it and dig it (or press twice to dig in where they stand). Trenches cut the damage defenders take and slow attackers; fighting and bombing wreck them.
 - Terrain: open, forest, hills, mountains, dry ground, marsh, cities, rivers and roads, each changing speed and combat. Roads give a fast road march.
 - Orders route around water, rough ground and enemy troops; drag in a curve to give a hand-drawn route.
 - Air wings: bombing strikes and fighter cover. Fighting and bombing scar the ground.

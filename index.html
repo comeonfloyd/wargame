@@ -154,7 +154,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
     <div class="grp">
       <button id="bAll" title="Select all your units (A)">All</button>
       <button id="bHold" title="Stop selected units">Halt</button>
-      <button id="bDig" title="Selected units build a defence line where they stand or where they arrive (D)">Dig in</button>
+      <button id="bDig" title="Draw a defence line for the selected units to dig, or press twice to dig in where they stand (D)">Dig in</button>
       <span id="selinfo">No units selected</span>
     </div>
     <div class="sep"></div>
@@ -178,7 +178,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
     <ul id="briefList">
       <li>Drag your dots to position them. Spend your 4 reserves with <b>+ Inf</b> and <b>+ Armor</b>.</li>
       <li><b>Moving troops:</b> select units (tap one, <b>Box</b> to drag a box round several, or <b>All</b>). Then either drag any selected unit to where it should go (the group keeps its formation), tap the map to send the group there, or press <b>Line</b> and draw a front: each unit takes the nearest spot on it. A cross marks each selected unit's destination.</li>
-      <li><b>Dig in</b> (<kbd>D</kbd>): selected units build a defence line where they stand, or where they arrive if they are on the move. Trenches grow while the unit is still and out of combat (about half a minute for infantry; armor digs slowly). Troops in their own trenches take up to 45% less damage, and enemies crossing them are slowed. Fighting and bombing wreck trenches, and captured ones are only half as good. Tip: <b>Line</b> then <b>Dig in</b> builds a fortified front.</li>
+      <li><b>Defence lines:</b> select units, press <b>Dig in</b> (<kbd>D</kbd>) and draw a line on the map: the selected units spread out along it and dig a trench that follows your line. Press <b>Dig in</b> twice instead to dig in where they stand (or where they arrive). Trenches grow while the unit is still and out of combat (about half a minute for infantry; armor digs slowly). Troops in their own trenches take up to 45% less damage, and enemies crossing them are slowed. Fighting and bombing wreck trenches, and captured ones are only half as good. The longer the stretch each unit has to dig, the slower it goes; planned trench shows as a dashed line until work starts. You can draw defence lines during deployment too.</li>
       <li>Units take ground around them. Troops cut off from their own map edges and HQ wither. Water is impassable.</li>
       <li>Drag a unit in a straight line and it plans its own route; drag in a curve and it follows the route you drew.</li>
       <li>Orders route around water, rough ground and enemy troops. Troops marching on roads move 60% faster (armor 90%), so long moves follow the road network. Forest, hills, mountains, marsh and cities slow troops (armor most) and protect defenders; hills give the high ground. Hover over the map to see the ground.</li>
@@ -697,17 +697,26 @@ function frontDir(x,y,side){ // direction along the front line at (x,y)
 }
 function obstacle(u){let o=0;for(const w of G.works)if(w.s!==u.side&&w.q>0.1&&segD(w,u.x,u.y)<1.2*K)o=Math.max(o,w.q);return o;}
 function dig(dt){
+  const plans=new Map();for(const w of G.works)if(w.by){if(!plans.has(w.by))plans.set(w.by,[]);plans.get(w.by).push(w);}
   for(const u of G.units){
     const k=u.side===RED?(u.dig?1:0):(u.role==="line"||u.garrison?D_().dig:0);
     if(!k||u.path||u.eng)continue;
+    const mine=plans.get(u.id);
+    if(mine){ // a drawn line: work on the whole stretch, slower the longer it is
+      let tot=0,cx_=0,cy_=0;for(const w of mine){tot+=2*w.len;cx_+=w.x;cy_+=w.y;}cx_/=mine.length;cy_/=mine.length;
+      if(Math.hypot(u.x-cx_,u.y-cy_)>tot/2+3*K)continue;
+      const kk=k*dt*(u.type==="inf"?1:0.35)*Math.min(1.5,9*K/Math.max(tot,1e-6));
+      for(const w of mine)if(G.owner[cellOf(w.x,w.y)]===u.side){w.q=Math.min(1,w.q+WORK.build*kk);if(w.q>=0.1)w.plan=false;}
+      continue;}
     let w=null,bd=WORK.reach*K;for(const v of G.works){if(v.s!==u.side)continue;const d=Math.hypot(v.x-u.x,v.y-u.y);if(d<bd){bd=d;w=v;}}
     if(!w){if(G.owner[cellOf(u.x,u.y)]!==u.side)continue;const [dx,dy]=frontDir(u.x,u.y,u.side);w={s:u.side,x:u.x,y:u.y,dx,dy,len:0.5*K,q:0.05};G.works.push(w);}
     const kk=k*dt*(u.type==="inf"?1:0.35);
     w.q=Math.min(1,w.q+WORK.build*kk);w.len=Math.min(WORK.maxLen*K,w.len+WORK.grow*K*kk);
   }
   // trenches over ground that changed hands now face the wrong way: half as useful to the new owner
-  for(const w of G.works){const o=G.owner[cellOf(w.x,w.y)];if(o!==w.s&&!M.water[cellOf(w.x,w.y)]){w.s=o;w.q*=0.5;}}
-  G.works=G.works.filter(w=>w.q>0.04);
+  for(const w of G.works){if(w.plan)continue;const o=G.owner[cellOf(w.x,w.y)];if(o!==w.s&&!M.water[cellOf(w.x,w.y)]){w.s=o;w.q*=0.5;w.by=0;}}
+  const alive=new Set(G.units.map(u=>u.id));
+  G.works=G.works.filter(w=>w.plan?alive.has(w.by):w.q>0.04);
   // cover each unit gets from its own side's trenches
   for(const u of G.units){let c=0;for(const w of G.works)if(w.s===u.side&&segD(w,u.x,u.y)<WORK.reach*K)c=Math.max(c,w.q);u.cover=c;}
 }
@@ -890,7 +899,7 @@ function orderAlong(lead,raw){
       if(M.water[cellOf(q[0],q[1])]){q=nearestCell(q[0],q[1],c=>!M.water[c]);if(!q)continue;}
       if(!lineClear(cur[0],cur[1],q[0],q[1])){const a=astar(cur[0],cur[1],q[0],q[1],u.type);if(a)path.push(...a);else continue;}else path.push(q);
       cur=q;}
-    if(!path.length)continue;u.dig=false;u.path=path;[u.tx,u.ty]=path[path.length-1];u.rest=false;
+    if(!path.length)continue;u.dig=false;dropPlan(u);u.path=path;[u.tx,u.ty]=path[path.length-1];u.rest=false;
   }
   toast(`${grp.length>1?grp.length+" units follow":"Unit follows"} your route`);
 }
@@ -900,11 +909,22 @@ function orderGroup(lead,x,y){
   for(const u of grp)placeOrMove(u,x+(u.x-ox),y+(u.y-oy),dg);
 }
 function placeOrMove(u,x,y,dg){
-  x=clampX(x);y=clampY(y);if(G.phase==="battle")u.dig=false;
+  x=clampX(x);y=clampY(y);u.dig=false;dropPlan(u);
   if(G.phase==="setup"){if(setupSafe(x,y)){u.x=x;u.y=y;}}
   else{setOrder(u,x,y,dg||dangerMask(u.side,x,y));u.rest=false;}
 }
-function orderLine(pts){
+function polyPart(pts,seg,d0,d1){ // the piece of a polyline between arc lengths d0 and d1
+  const at=d=>{let s=1;while(s<seg.length-1&&seg[s]<d)s++;const t=(d-seg[s-1])/((seg[s]-seg[s-1])||1);return [pts[s-1][0]+(pts[s][0]-pts[s-1][0])*t,pts[s-1][1]+(pts[s][1]-pts[s-1][1])*t];};
+  const out=[at(d0)];for(let k=1;k<seg.length-1;k++)if(seg[k]>d0&&seg[k]<d1)out.push(pts[k]);out.push(at(d1));return out;}
+function planWorks(u,piece){ // straight trench sections (at most 3 km) along a unit's stretch of a drawn line
+  dropPlan(u);const sp=simplify(piece,0.3*K);
+  for(let k=1;k<sp.length;k++){const a=sp[k-1],b=sp[k],L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L<0.3*K)continue;const n=Math.ceil(L/(3*K));
+    for(let m=0;m<n;m++){const t0=m/n,t1=(m+1)/n,x0=a[0]+(b[0]-a[0])*t0,y0=a[1]+(b[1]-a[1])*t0,x1=a[0]+(b[0]-a[0])*t1,y1=a[1]+(b[1]-a[1])*t1;
+      G.works.push({s:u.side,x:(x0+x1)/2,y:(y0+y1)/2,dx:(x1-x0)/(L/n),dy:(y1-y0)/(L/n),len:L/n/2,q:0,by:u.id,plan:true});}}
+  u.dig=true;
+}
+function dropPlan(u){G.works=G.works.filter(w=>!(w.by===u.id&&w.q<0.1));for(const w of G.works)if(w.by===u.id)w.by=0;}
+function orderLine(pts,fortify){
   const grp=selected();if(!grp.length||pts.length<2)return;
   const seg=[0];for(let k=1;k<pts.length;k++)seg.push(seg[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));
   const len=seg[seg.length-1];if(len<3*K)return;
@@ -917,7 +937,10 @@ function orderLine(pts){
   for(let pass=0,better=true;better&&pass<50;pass++){better=false;
     for(let i=0;i<grp.length;i++)for(let j=i+1;j<grp.length;j++){
       if(d2(grp[i],slots[as[j]])+d2(grp[j],slots[as[i]])<d2(grp[i],slots[as[i]])+d2(grp[j],slots[as[j]])-1e-6){[as[i],as[j]]=[as[j],as[i]];better=true;}}}
-  grp.forEach((u,k)=>placeOrMove(u,slots[as[k]][0],slots[as[k]][1]));
+  grp.forEach((u,k)=>{const [x,y]=slots[as[k]];placeOrMove(u,x,y);
+    if(fortify&&G.phase==="setup"&&Math.hypot(u.x-x,u.y-y)>K)setOrder(u,x,y,dangerMask(RED,x,y)); // too close to the front to place now: they march there when the battle starts
+    if(fortify)planWorks(u,polyPart(pts,seg,as[k]/grp.length*len,(as[k]+1)/grp.length*len));});
+  if(fortify){toast(`${grp.length} unit${grp.length>1?"s":""} will dig the defence line you drew`);return;}
   G.lastLine={pts,t:performance.now()};
   toast(`${grp.length} unit${grp.length>1?"s":""} ordered onto the line`);
 }
@@ -991,6 +1014,8 @@ function drawWorks(){
   for(const w of G.works){
     const L=w.len*s,x=sx(w.x),y=sy(w.y),tx=w.dx,ty=w.dy,nx=-ty,ny=tx;
     if(x<-L-20||y<-L-20||x>VW+L+20||y>VH+L+20)continue;
+    if(w.plan){ctx.strokeStyle=w.s===RED?"rgba(120,24,20,.75)":"rgba(24,26,22,.6)";ctx.lineWidth=2;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(x-tx*L,y-ty*L);ctx.lineTo(x+tx*L,y+ty*L);ctx.stroke();ctx.setLineDash([]);continue;}
     // earth parapet
     ctx.strokeStyle=`rgba(120,92,58,${0.25+0.35*w.q})`;ctx.lineWidth=Math.max(4,1.6*K*s);ctx.lineCap="round";
     ctx.beginPath();ctx.moveTo(x-tx*L,y-ty*L);ctx.lineTo(x+tx*L,y+ty*L);ctx.stroke();
@@ -1188,7 +1213,7 @@ function drawBattle(now){
     ctx.fillStyle="rgba(201,37,44,.25)";for(const u of selected()){ctx.beginPath();ctx.arc(gest.sx+(u.x-lead.x)*cam.s,gest.sy+(u.y-lead.y)*cam.s,R,0,7);ctx.fill();}
   }
   if(gest&&gest.type==="box"){ctx.strokeStyle="#E2B13C";ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(gest.ax,gest.ay,gest.bx-gest.ax,gest.by-gest.ay);ctx.setLineDash([]);}
-  if(gest&&gest.type==="line"&&gest.pts.length>1){ctx.strokeStyle="#C9252C";ctx.lineWidth=4;ctx.globalAlpha=.75;ctx.beginPath();
+  if(gest&&gest.type==="line"&&gest.pts.length>1){ctx.strokeStyle=gest.fort?"#6B4A2B":"#C9252C";ctx.lineWidth=4;ctx.globalAlpha=.75;ctx.beginPath();
     gest.pts.forEach((p,k)=>k?ctx.lineTo(sx(p[0]),sy(p[1])):ctx.moveTo(sx(p[0]),sy(p[1])));ctx.stroke();ctx.globalAlpha=1;}
   drawAir();
   if(G.airMode&&hover){const r=(G.airMode==="strike"?AIR.strikeR:AIR.coverR)*K*cam.s;ctx.strokeStyle="#E2B13C";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(sx(hover[0]),sy(hover[1]),r,0,7);ctx.stroke();ctx.setLineDash([]);}
@@ -1218,8 +1243,8 @@ cv.addEventListener("pointerdown",e=>{
   if(APP==="pick"){gest={type:"pan",lx:px,ly:py,px,py,moved:false};return;}
   if(APP==="front"){gest=e.button===0?{type:"draw",pts:[[wx(px),wy(py)]],px,py}:{type:"pan",lx:px,ly:py,px,py,moved:false};return;}
   if(!G)return;
-  const lineMode=e.button===2||tool==="line"||e.ctrlKey;
-  if(lineMode&&G.sel.size&&G.phase!=="over"){gest={type:"line",pts:[[wx(px),wy(py)]],px,py,moved:false};return;}
+  const lineMode=e.button===2||tool==="line"||tool==="dig"||e.ctrlKey;
+  if(lineMode&&G.sel.size&&G.phase!=="over"){gest={type:"line",fort:tool==="dig",pts:[[wx(px),wy(py)]],px,py,moved:false};return;}
   if(G.placing||G.airMode){gest={type:"pan",lx:px,ly:py,px,py,moved:false};return;}
   const u=G.phase!=="over"&&hitUnit(px,py);
   if(u){const was=G.sel.has(u.id);if(!was){if(!e.shiftKey)G.sel.clear();G.sel.add(u.id);}gest={type:"drag",unit:u,px,py,sx:px,sy:py,moved:false,was,shift:e.shiftKey,pts:[[u.x,u.y]]};syncUI();return;}
@@ -1258,7 +1283,8 @@ function endPtr(e){
     else{if(!g.add)G.sel.clear();for(const u of own()){const x=sx(u.x),y=sy(u.y);if(x>=x0&&x<=x1&&y>=y0&&y<=y1)G.sel.add(u.id);}
       if(tool==="box"){setTool("move");if(G.sel.size)toast(`${G.sel.size} selected: drag one to move them together, tap the map to send them, or press Line to spread them along a front`);}}
   }else if(g.type==="line"){
-    if(g.moved)orderLine(g.pts);else if(G.sel.size)orderGroup(null,wx(px),wy(py));
+    if(g.fort){setTool("move");if(g.moved)orderLine(g.pts,true);else digHere();}
+    else{if(g.moved)orderLine(g.pts);else if(G.sel.size)orderGroup(null,wx(px),wy(py));}
     if(tool==="line")setTool("move");
   }else if(g.type==="pan"&&!g.moved){
     if(G.airMode)orderAir(wx(px),wy(py));else if(G.placing)tryPlace(wx(px),wy(py));else if(G.sel.size&&G.phase!=="over")orderGroup(null,wx(px),wy(py));
@@ -1289,16 +1315,19 @@ $("bSwap").onclick=()=>{SWAP=!SWAP;recomputeOwner();};
 $("bStraight").onclick=()=>{FRONT=[[M.w/2,0],[M.w/2,M.h]];recomputeOwner();};
 $("bBack").onclick=()=>toPicker();
 $("bDeploy").onclick=()=>{APP="game";newBattle();showScreen();territoryFrom(G.owner);showBrief("Deployment",null);syncUI();};
-function setTool(t){tool=t;if(G)G.placing=null;for(const [id,v] of [["tMove","move"],["tBox","box"],["tLine","line"]])$(id).setAttribute("aria-pressed",String(t===v));syncUI();}
+function setTool(t){tool=t;if(G)G.placing=null;for(const [id,v] of [["tMove","move"],["tBox","box"],["tLine","line"],["bDig","dig"]])$(id).setAttribute("aria-pressed",String(t===v));syncUI();}
 function setSpeed(s){G.speed=s;G.paused=false;syncUI();}
 $("tMove").onclick=()=>setTool("move");$("tBox").onclick=()=>setTool("box");$("tLine").onclick=()=>{setTool("line");toast(G.sel.size?"Now draw the front line you want them to hold":"Select units first, then draw their line");};
 $("bPause").onclick=()=>{G.paused=!G.paused;syncUI();};
 $("bS1").onclick=()=>setSpeed(1);$("bS2").onclick=()=>setSpeed(2);$("bS4").onclick=()=>setSpeed(4);
 $("bAll").onclick=()=>{G.sel=new Set(own().map(u=>u.id));syncUI();};
 $("bHold").onclick=()=>{for(const u of selected()){u.tx=u.ty=null;u.path=null;}syncUI();};
-function digIn(){const sel=selected();if(!sel.length){toast("Select units first, then Dig in");return;}
-  for(const u of sel)u.dig=true;const moving=sel.some(u=>u.path);
-  toast(`${sel.length} unit${sel.length>1?"s":""} will dig in${moving?" when they arrive":""}`);syncUI();}
+function digHere(){const sel=selected();if(!sel.length){toast("Select units first, then Dig in");return;}
+  for(const u of sel){dropPlan(u);u.dig=true;}const moving=sel.some(u=>u.path);
+  toast(`${sel.length} unit${sel.length>1?"s":""} will dig in${moving?" when they arrive":" where they stand"}`);syncUI();}
+function digIn(){if(!G.sel.size){toast("Select units first, then Dig in");return;}
+  if(tool==="dig"){setTool("move");digHere();return;}
+  setTool("dig");toast("Draw the defence line for them to dig, or press Dig in again to dig in where they stand");}
 $("bDig").onclick=digIn;
 $("bInf").onclick=()=>{G.airMode=null;G.placing=G.placing==="inf"?null:"inf";if(G.placing)toast("Tap your own ground to place infantry");syncUI();};
 $("bArm").onclick=()=>{G.airMode=null;G.placing=G.placing==="arm"?null:"arm";if(G.placing)toast("Tap your own ground to place armor");syncUI();};
