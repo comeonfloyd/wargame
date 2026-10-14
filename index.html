@@ -57,41 +57,49 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
 #frontbar h2{font-size:20px}
 #frontbar p{font-size:13px;color:#CDD1C3;line-height:1.4}
 
-/* battle HUD */
-#hq{top:max(10px,env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));padding:10px 12px;display:grid;gap:6px;min-width:0}
-#hq h1{font-size:22px}
-#mapname{font-size:12px;color:var(--plate-dim);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#clock{font-family:var(--f-mono);font-size:12px;color:var(--plate-dim);font-variant-numeric:tabular-nums;letter-spacing:.02em}
-#score{top:max(10px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));padding:10px 12px;width:min(260px,calc(100vw - 32px - 220px));min-width:150px}
-#vpbar{position:relative;height:10px;background:#5b5e55;margin:6px 0 4px;border-radius:1px;overflow:hidden}
+/* battle HUD: slim strips that leave the map clear */
+.nw{flex-wrap:nowrap}
+#hq,#score,#bar{opacity:.94}
+#hq{top:max(8px,env(safe-area-inset-top,0px));left:max(8px,env(safe-area-inset-left,0px));padding:4px;display:grid;gap:6px}
+#hq button,#bar button{padding:5px 7px;font-size:11px;letter-spacing:.04em}
+#bMenu{font-size:14px!important;padding:3px 7px!important}
+#menu{display:grid;gap:6px;padding:2px 2px 2px}
+#menu[hidden]{display:none}
+#mapname{font-size:12px;color:var(--plate-dim);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#clock{font-family:var(--f-mono);font-size:11px;color:var(--plate-dim);font-variant-numeric:tabular-nums;padding:0 4px;white-space:nowrap}
+#score{top:max(8px,env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));padding:6px 8px;width:170px}
+#vpbar{position:relative;flex:1;height:6px;background:#5b5e55;border-radius:1px;overflow:hidden}
 #vpbar i{position:absolute;left:0;top:0;bottom:0;background:var(--red)}
-#vpnums{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
-#vpnums .r{color:#F08A86}
-#forces{margin-top:6px;font-size:12px;color:var(--plate-dim);font-variant-numeric:tabular-nums}
-#bar{left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom,0px));padding:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 32px)}
-#bar .grp{display:flex;gap:4px;align-items:center}
-#bar .sep{width:1px;align-self:stretch;background:#43463F}
-#reserve{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;min-width:58px;text-align:center}
-#reserve small{display:block;height:3px;background:#43463F;margin-top:4px;position:relative}
+#vpR,#vpB{font-family:var(--f-mono);font-size:11px;font-variant-numeric:tabular-nums}
+#vpR{color:#F08A86}
+#forces{margin-top:4px;font-size:11px;color:var(--plate-dim);font-variant-numeric:tabular-nums;text-align:center}
+#terr{left:max(8px,env(safe-area-inset-left,0px));bottom:max(52px,calc(env(safe-area-inset-bottom,0px) + 52px));padding:4px 7px;font-size:11px;color:var(--plate-dim);pointer-events:none;opacity:.9}
+#bar{left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom,0px));padding:4px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;max-width:calc(100% - 16px);overflow-x:auto;scrollbar-width:none}
+#bar::-webkit-scrollbar{display:none}
+#bar .grp{display:flex;gap:3px;align-items:center;flex:none}
+#bar .sep{width:1px;align-self:stretch;background:#43463F;flex:none}
+#reserve{font-family:var(--f-mono);font-size:11px;font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+#reserve small{display:block;height:2px;background:#43463F;margin-top:3px;position:relative}
 #reserve small i{position:absolute;left:0;top:0;bottom:0;background:var(--accent)}
-#airinfo{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums;min-width:62px;text-align:center}
-#selinfo{font-size:12px;color:var(--plate-dim);min-width:90px;text-align:center}
+#airinfo{font-family:var(--f-mono);font-size:11px;font-variant-numeric:tabular-nums;min-width:36px;text-align:center}
+#selinfo{font-family:var(--f-mono);font-size:11px;color:var(--accent);white-space:nowrap}
+#selinfo:empty{display:none}
 #brief{left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 20px;width:min(440px,calc(100% - 32px));display:grid;gap:10px;max-height:calc(100% - 40px);overflow:auto}
 #brief h2{font-size:26px}
 #brief p{font-size:14px;line-height:1.45;color:#CDD1C3}
 #brief ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5;color:#CDD1C3}
 #brief kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--plate-line);padding:0 4px;border-radius:2px}
-#toast{left:50%;transform:translateX(-50%);top:max(64px,calc(env(safe-area-inset-top,0px) + 64px));padding:8px 12px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:5}
+#toast{left:50%;transform:translateX(-50%);top:max(10px,calc(env(safe-area-inset-top,0px) + 10px));padding:8px 12px;font-size:13px;pointer-events:none;opacity:0;transition:opacity .25s;z-index:5}
 #toast.on{opacity:1}
-#helpbtn{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:max(10px,env(safe-area-inset-bottom,0px))}
 @media (max-width:720px){
   #picker h1{font-size:18px} #picker .hint{display:none}
-  #hq h1{font-size:18px} #hq{padding:8px 10px;max-width:calc(100% - 32px - 146px)} #hq button{padding:6px 7px;font-size:11px} #clock{font-size:11px} #mapname{max-width:170px}
-  #score{width:138px;min-width:0;padding:8px 10px} #score .lbl{font-size:9px;letter-spacing:.08em} #forces{font-size:11px}
-  #toast{top:max(150px,calc(env(safe-area-inset-top,0px) + 150px))}
-  #bar{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));transform:none;max-width:none;bottom:max(52px,calc(env(safe-area-inset-bottom,0px) + 52px))}
-  #bar .sep,#pickgo .sep{display:none}
+  #score{width:150px;top:max(50px,calc(env(safe-area-inset-top,0px) + 50px))}
+  #bar{flex-wrap:wrap;justify-content:center;overflow:visible}
+  #toast{top:max(96px,calc(env(safe-area-inset-top,0px) + 96px))}
+  #bar{left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));transform:none;max-width:none}
+  #pickgo .sep{display:none}
 }
+@media (hover:none){#terr{display:none!important}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -126,59 +134,58 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
 
   <!-- 3. battle -->
   <header class="plate" id="hq" hidden>
-    <h1>ODER <span>FRONT</span></h1>
-    <div id="mapname"></div>
-    <div id="clock">D1 05:00 · DEPLOYMENT</div>
-    <div class="row" role="group" aria-label="Game speed">
+    <div class="row nw" role="group" aria-label="Game speed">
+      <button id="bMenu" aria-expanded="false" aria-controls="menu" title="Menu: save, maps, help">☰</button>
+      <span id="clock">D1 05:00</span>
       <button id="bPause" title="Pause (Space)">❚❚</button>
       <button id="bS1" aria-pressed="true" title="Speed 1 (key 1)">1×</button>
       <button id="bS2" aria-pressed="false" title="Speed 2 (key 2)">2×</button>
       <button id="bS4" aria-pressed="false" title="Speed 4 (key 3)">4×</button>
     </div>
-    <div class="row"><button id="bSave" title="Save this battle in this browser">Save</button><button id="bMaps" title="Save and choose another map">Maps</button></div>
+    <div id="menu" hidden>
+      <div id="mapname"></div>
+      <div class="row"><button id="bSave" title="Save this battle in this browser">Save</button><button id="bMaps" title="Save and choose another map">Maps</button><button id="helpbtn" title="How to play">Help</button></div>
+    </div>
   </header>
-  <aside class="plate" id="score" hidden>
-    <div class="lbl">Towns held · feeds reserves</div>
-    <div id="vpbar"><i id="vpfill"></i></div>
-    <div id="vpnums"><span class="r" id="vpR">Red 0</span><span id="vpB">0 Black</span></div>
+  <aside class="plate" id="score" hidden title="Towns held: they feed your reserves">
+    <div class="row nw"><span id="vpR">0</span><div id="vpbar"><i id="vpfill"></i></div><span id="vpB">0</span></div>
     <div id="forces">—</div>
-    <div id="terr" class="lbl" style="margin-top:6px;letter-spacing:.06em;text-transform:none;font-size:11px"></div>
   </aside>
+  <div class="plate" id="terr" hidden></div>
   <nav class="plate" id="bar" aria-label="Orders" hidden>
     <div class="grp" role="group" aria-label="Map tool">
-      <button id="tMove" aria-pressed="true" title="Move tool: drag a unit to send it, drag the map to pan">Move</button>
-      <button id="tBox" aria-pressed="false" title="Drag a box round units to select them (or Shift+drag)">Box</button>
-      <button id="tLine" aria-pressed="false" title="Draw a front line for the selected units (or right-drag)">Line</button>
+      <button id="tMove" aria-pressed="true" title="Move: drag a unit to send it, drag the map to pan">Move</button>
+      <button id="tBox" aria-pressed="false" title="Box: drag a box round units to select them (or Shift+drag)">Box</button>
+      <button id="tLine" aria-pressed="false" title="Line: draw a front for the selected units to spread along (or right-drag)">Line</button>
+      <button id="bDig" title="Dig: draw a defence line for the selected units, or press twice to dig in where they stand (D)">Dig</button>
     </div>
     <div class="sep"></div>
     <div class="grp">
       <button id="bAll" title="Select all your units (A)">All</button>
       <button id="bHold" title="Stop selected units">Halt</button>
-      <button id="bDig" title="Draw a defence line for the selected units to dig, or press twice to dig in where they stand (D)">Dig in</button>
-      <span id="selinfo">No units selected</span>
+      <span id="selinfo"></span>
     </div>
     <div class="sep"></div>
     <div class="grp">
       <div id="reserve" title="Reserves: earned from time and the towns you hold">4 RES<small><i id="resfill"></i></small></div>
-      <button id="bInf" title="Place an infantry division (1 reserve)">+ Inf</button>
-      <button id="bArm" title="Place an armored division (2 reserves)">+ Armor</button>
+      <button id="bInf" title="Place an infantry division (1 reserve)">+Inf</button>
+      <button id="bArm" title="Place an armored division (2 reserves)">+Arm</button>
     </div>
     <div class="sep"></div>
     <div class="grp" role="group" aria-label="Air force">
-      <span id="airinfo" title="Air wings ready / total">AIR 2/2</span>
+      <span id="airinfo" title="Air wings ready / total">✈ 2/2</span>
       <button id="bStrike" aria-pressed="false" title="Send a wing to bomb an area (S)">Strike</button>
       <button id="bCover" aria-pressed="false" title="Send a wing to fly fighter cover over an area (C)">Cover</button>
-      <button id="bAir" title="Buy an air wing (3 reserves)">+ Air</button>
+      <button id="bAir" title="Buy an air wing (3 reserves)">+Air</button>
     </div>
   </nav>
-  <button id="helpbtn" hidden title="How to play">? Help</button>
   <section class="plate" id="brief" role="dialog" aria-labelledby="briefTitle" hidden>
     <h2 id="briefTitle">Deployment</h2>
     <p id="briefText"></p>
     <ul id="briefList">
-      <li>Drag your dots to position them. Spend your 4 reserves with <b>+ Inf</b> and <b>+ Armor</b>.</li>
+      <li>Drag your dots to position them. Spend your 4 reserves with <b>+Inf</b> and <b>+Arm</b>.</li>
       <li><b>Moving troops:</b> select units (tap one, <b>Box</b> to drag a box round several, or <b>All</b>). Then either drag any selected unit to where it should go (the group keeps its formation), tap the map to send the group there, or press <b>Line</b> and draw a front: each unit takes the nearest spot on it. A cross marks each selected unit's destination.</li>
-      <li><b>Defence lines:</b> select units, press <b>Dig in</b> (<kbd>D</kbd>) and draw a line on the map: the selected units spread out along it and dig a trench that follows your line. Press <b>Dig in</b> twice instead to dig in where they stand (or where they arrive). Trenches grow while the unit is still and out of combat (about half a minute for infantry; armor digs slowly). Troops in their own trenches take up to 45% less damage, and enemies crossing them are slowed. Fighting and bombing wreck trenches, and captured ones are only half as good. The longer the stretch each unit has to dig, the slower it goes; planned trench shows as a dashed line until work starts. You can draw defence lines during deployment too.</li>
+      <li><b>Defence lines:</b> select units, press <b>Dig</b> (<kbd>D</kbd>) and draw a line on the map: the selected units spread out along it and dig a trench that follows your line. Press <b>Dig</b> twice instead to dig in where they stand (or where they arrive). Trenches grow while the unit is still and out of combat (about half a minute for infantry; armor digs slowly). Troops in their own trenches take up to 45% less damage, and enemies crossing them are slowed. Fighting and bombing wreck trenches, and captured ones are only half as good. The longer the stretch each unit has to dig, the slower it goes; planned trench shows as a dashed line until work starts. You can draw defence lines during deployment too.</li>
       <li>Units take ground around them. Troops cut off from their own map edges and HQ wither. Water is impassable.</li>
       <li>Drag a unit in a straight line and it plans its own route; drag in a curve and it follows the route you drew.</li>
       <li>Orders route around water, rough ground and enemy troops. Troops marching on roads move 60% faster (armor 90%), so long moves follow the road network. Forest, hills, mountains, marsh and cities slow troops (armor most) and protect defenders; hills give the high ground. Hover over the map to see the ground.</li>
@@ -1300,7 +1307,7 @@ function showScreen(){
   const pick=APP==="pick",front=APP==="front",game=APP==="game";
   $("picker").hidden=!pick;$("pickgo").hidden=!pick;$("loading").hidden=!(pick&&!WORLD);
   $("frontbar").hidden=!front;
-  for(const id of ["hq","score","bar","helpbtn"])$(id).hidden=!game;
+  for(const id of ["hq","score","bar"])$(id).hidden=!game;if(!game){$("terr").hidden=true;$("menu").hidden=true;$("bMenu").setAttribute("aria-expanded","false");}
   if(!game)$("brief").hidden=true;
   if(game)$("mapname").textContent=M.name;
   baseKey="";
@@ -1322,12 +1329,12 @@ $("bPause").onclick=()=>{G.paused=!G.paused;syncUI();};
 $("bS1").onclick=()=>setSpeed(1);$("bS2").onclick=()=>setSpeed(2);$("bS4").onclick=()=>setSpeed(4);
 $("bAll").onclick=()=>{G.sel=new Set(own().map(u=>u.id));syncUI();};
 $("bHold").onclick=()=>{for(const u of selected()){u.tx=u.ty=null;u.path=null;}syncUI();};
-function digHere(){const sel=selected();if(!sel.length){toast("Select units first, then Dig in");return;}
+function digHere(){const sel=selected();if(!sel.length){toast("Select units first, then Dig");return;}
   for(const u of sel){dropPlan(u);u.dig=true;}const moving=sel.some(u=>u.path);
   toast(`${sel.length} unit${sel.length>1?"s":""} will dig in${moving?" when they arrive":" where they stand"}`);syncUI();}
-function digIn(){if(!G.sel.size){toast("Select units first, then Dig in");return;}
+function digIn(){if(!G.sel.size){toast("Select units first, then Dig");return;}
   if(tool==="dig"){setTool("move");digHere();return;}
-  setTool("dig");toast("Draw the defence line for them to dig, or press Dig in again to dig in where they stand");}
+  setTool("dig");toast("Draw the defence line for them to dig, or press Dig again to dig in where they stand");}
 $("bDig").onclick=digIn;
 $("bInf").onclick=()=>{G.airMode=null;G.placing=G.placing==="inf"?null:"inf";if(G.placing)toast("Tap your own ground to place infantry");syncUI();};
 $("bArm").onclick=()=>{G.airMode=null;G.placing=G.placing==="arm"?null:"arm";if(G.placing)toast("Tap your own ground to place armor");syncUI();};
@@ -1341,7 +1348,8 @@ $("bStart").onclick=()=>{if(G.phase==="setup"){G.phase="battle";G.placing=null;G
 $("bClose").onclick=()=>{$("brief").hidden=true;};
 $("bRestart").onclick=()=>{if(!OWN0)return;newBattle();territoryFrom(G.owner);showBrief("Deployment",null);syncUI();};
 $("bNewMap").onclick=()=>toPicker();
-$("helpbtn").onclick=()=>{if($("brief").hidden)showBrief(G.phase==="setup"?"Deployment":"Orders",null);else $("brief").hidden=true;};
+$("bMenu").onclick=()=>{const m=$("menu"),open=m.hidden;m.hidden=!open;$("bMenu").setAttribute("aria-expanded",String(open));};
+$("helpbtn").onclick=()=>{$("menu").hidden=true;$("bMenu").setAttribute("aria-expanded","false");if($("brief").hidden)showBrief(G.phase==="setup"?"Deployment":"Orders",null);else $("brief").hidden=true;};
 function syncDiff(){for(const b of document.querySelectorAll("#diffrow button"))b.setAttribute("aria-pressed",String(b.dataset.d===DIFF));}
 for(const b of document.querySelectorAll("#diffrow button"))b.onclick=()=>{DIFF=b.dataset.d;try{localStorage.setItem("oderfront.diff",DIFF);}catch(e){}syncDiff();};
 function showBrief(title,why){
@@ -1370,7 +1378,7 @@ function syncUI(){
   $("bPause").setAttribute("aria-pressed",String(G.paused));
   for(const [id,s] of [["bS1",1],["bS2",2],["bS4",4]])$(id).setAttribute("aria-pressed",String(!G.paused&&G.speed===s));
   const sel=selected();
-  $("selinfo").textContent=sel.length?`${sel.length} selected · ${Math.round(sel.reduce((a,u)=>a+u.str,0)/sel.length)}%`:(G.placing?`Placing ${T[G.placing].label.toLowerCase()}`:"No units selected");
+  $("selinfo").textContent=sel.length?`${sel.length} sel · ${Math.round(sel.reduce((a,u)=>a+u.str,0)/sel.length)}%`:(G.placing?`placing ${T[G.placing].label.toLowerCase()}`:"");
   $("bInf").setAttribute("aria-pressed",String(G.placing==="inf"));$("bArm").setAttribute("aria-pressed",String(G.placing==="arm"));
   $("bInf").disabled=G.res[RED]<1||G.phase==="over";$("bArm").disabled=G.res[RED]<2||G.phase==="over";
   $("bStrike").setAttribute("aria-pressed",String(G.airMode==="strike"));$("bCover").setAttribute("aria-pressed",String(G.airMode==="cover"));
@@ -1380,18 +1388,19 @@ function hud(){
   if(APP==="front"){cv.style.cursor="crosshair";return;}
   if(APP==="pick"){cv.style.cursor="grab";return;}
   const mins=300+G.t*6,day=1+Math.floor(mins/1440),hh=Math.floor(mins%1440/60),mm=Math.floor(mins%60);
-  $("clock").textContent=`D${day} ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")} · ${G.phase==="setup"?"DEPLOYMENT":G.phase==="over"?"CEASEFIRE":G.paused?"PAUSED":"BATTLE"}`;
+  $("clock").textContent=`D${day} ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")} ${G.phase==="setup"?" · DEPLOY":G.phase==="over"?" · END":G.paused?" · PAUSED":""}`;
   const tot=G.vp[0]+G.vp[1]||1;$("vpfill").style.width=(100*G.vp[RED]/tot)+"%";
-  $("vpR").textContent=`Red ${G.vp[RED]}`;$("vpB").textContent=`${G.vp[BLK]} Black`;
+  $("vpR").textContent=`${G.vp[RED]}`;$("vpB").textContent=`${G.vp[BLK]}`;
   const n=[0,0],enc=[0,0];for(const u of G.units){n[u.side]++;if(!u.sup)enc[u.side]++;}
   const ar=G.air.filter(a=>a.side===RED),ab=G.air.filter(a=>a.side===BLK).length;
-  $("airinfo").textContent=`AIR ${ar.filter(a=>a.state==="ready").length}/${ar.length}`;
+  $("airinfo").textContent=`✈ ${ar.filter(a=>a.state==="ready").length}/${ar.length}`;
   $("bAir").disabled=G.res[RED]<AIR.cost||ar.length>=AIR.max||G.phase==="over";
-  if(hover&&hover[0]>=0&&hover[1]>=0&&hover[0]<M.w&&hover[1]<M.h){const c=cellOf(hover[0],hover[1]);
+  const onMap=hover&&hover[0]>=0&&hover[1]>=0&&hover[0]<M.w&&hover[1]<M.h;if($("terr").hidden===!!onMap)$("terr").hidden=!onMap;
+  if(onMap){const c=cellOf(hover[0],hover[1]);
     if(M.water[c])$("terr").textContent="Water · impassable";
     else{const t=TER[M.land[c]],pc=v=>Math.round(v*100)+"%";
-      $("terr").textContent=`${t.name}${M.road[c]?" + road":""}${M.river[c]?" + river":""} · speed inf ${pc(spdF("inf",c)*(M.river[c]?0.45:1))}, armor ${pc(spdF("arm",c)*(M.river[c]?0.45:1))} · defenders take ${pc(t.def)} damage`;}}
-  $("forces").textContent=`Divisions ${n[0]} vs ${n[1]} · Air ${ar.length} vs ${ab}`+(enc[0]?` · ${enc[0]} of yours cut off`:"")+(enc[1]?` · ${enc[1]} enemy cut off`:"");
+      $("terr").textContent=`${t.name}${M.road[c]?" + road":""}${M.river[c]?" + river":""} · inf ${pc(spdF("inf",c)*(M.river[c]?0.45:1))} · arm ${pc(spdF("arm",c)*(M.river[c]?0.45:1))} speed · defenders take ${pc(t.def)}`;}}
+  $("forces").textContent=`${n[0]} vs ${n[1]} div · air ${ar.length}:${ab}`+(enc[0]?` · ${enc[0]} cut off`:"");$("forces").title=`Divisions ${n[0]} vs ${n[1]}, air wings ${ar.length} vs ${ab}`+(enc[0]?`, ${enc[0]} of yours cut off`:"")+(enc[1]?`, ${enc[1]} enemy cut off`:"");
   $("reserve").firstChild.textContent=`${G.res[RED]} RES`;$("resfill").style.width=(G.phase==="battle"?G.inc[RED]*100:0)+"%";
   const di=G.res[RED]<1||G.phase==="over",da=G.res[RED]<2||G.phase==="over";if($("bInf").disabled!==di)$("bInf").disabled=di;if($("bArm").disabled!==da)$("bArm").disabled=da;
   if(G.placing&&G.res[RED]<T[G.placing].cost){G.placing=null;syncUI();}
