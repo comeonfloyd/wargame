@@ -154,6 +154,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
     <div class="grp">
       <button id="bAll" title="Select all your units (A)">All</button>
       <button id="bHold" title="Stop selected units">Halt</button>
+      <button id="bAuto" title="Hand the selected units back to automatic front-holding">Auto</button>
       <span id="selinfo">No units selected</span>
     </div>
     <div class="sep"></div>
@@ -177,6 +178,7 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
     <ul id="briefList">
       <li>Drag your dots to position them. Spend your 4 reserves with <b>+ Inf</b> and <b>+ Armor</b>.</li>
       <li><b>Moving troops:</b> select units (tap one, <b>Box</b> to drag a box round several, or <b>All</b>). Then either drag any selected unit to where it should go (the group keeps its formation), tap the map to send the group there, or press <b>Line</b> and draw a front: each unit takes the nearest spot on it. A cross marks each selected unit's destination.</li>
+      <li><b>You don't have to steer everything.</b> Infantry you haven't given an order is on <b>Auto</b>: it holds the front, fills gaps and pulls back when cut off or worn down. Once you order a unit it's yours until you press <b>Auto</b> again. A small white dot on a unit's shoulder means it's on auto.</li>
       <li>Units take ground around them. Troops cut off from their own map edges and HQ wither. Water is impassable.</li>
       <li>Drag a unit in a straight line and it plans its own route; drag in a curve and it follows the route you drew.</li>
       <li>Orders route around water, rough ground and enemy troops. Troops marching on roads move 60% faster (armor 90%), so long moves follow the road network. Forest, hills, mountains, marsh and cities slow troops (armor most) and protect defenders; hills give the high ground. Hover over the map to see the ground.</li>
@@ -185,6 +187,8 @@ input[type=text],input[type=number]{font:400 14px var(--f-body);background:var(-
       <li id="winrule"></li>
     </ul>
     <p style="font-size:12px;color:var(--plate-dim)"><kbd>Space</kbd> pause · <kbd>A</kbd> select all · <kbd>Shift</kbd>+drag box · wheel or pinch to zoom</p>
+    <div class="row" id="diffrow" role="group" aria-label="Difficulty" style="margin-bottom:10px"><span style="font-size:12px;color:var(--plate-dim);margin-right:4px">Opponent</span>
+      <button data-d="easy" title="Black reacts slowly, hits softer and earns fewer reserves">Easy</button><button data-d="normal" title="The original opponent">Normal</button><button data-d="hard" title="Black reacts fast and earns more">Hard</button></div>
     <div class="row"><button class="go" id="bStart">Start battle</button><button id="bClose" hidden>Close</button><button id="bRestart" hidden>Replay this map</button><button id="bNewMap" hidden>Other map</button></div>
   </section>
   <div class="plate" id="toast" role="status" aria-live="polite"></div>
@@ -480,6 +484,10 @@ const T={
   arm:{speed:1.9,atk:1.75,def:0.85,claim:4.0,cost:2,label:"Armor"}
 };
 const HQ_HOLD=25,ENGAGE=6.5,CONTACT=3.4,DMG=1.5,MAXUNITS=60;
+// how sharp Black plays: how often it rethinks, how hard it hits, how fast it earns reserves
+const DIFFS={easy:{think:5,arm:14,air:10,fire:0.7,inc:0.5,rest:false,strikes:1},normal:{think:2.2,arm:6,air:4,fire:1,inc:1,rest:true,strikes:2},hard:{think:1.5,arm:4,air:3,fire:1.1,inc:1.3,rest:true,strikes:3}};
+let DIFF=(()=>{try{return localStorage.getItem("oderfront.diff")||"easy";}catch(e){return "easy";}})();if(!DIFFS[DIFF])DIFF="easy";
+const D_=()=>DIFFS[DIFF];
 /* air wings: distances in km (scaled by K), times in game seconds */
 const AIR={speed:14,strikeR:6,strikeT:4,strikeDmg:9,aa:1.0,coverR:22,coverT:35,rearm:20,cost:3,max:5};
 let G=null,FIELD=null;
@@ -548,7 +556,7 @@ function stepAir(dt){
   G.air=G.air.filter(w=>w.hp>0);
 }
 function addUnit(side,type,x,y){
-  const u={id:G.nid++,side,type,x:clampX(x),y:clampY(y),str:100,tx:null,ty:null,path:null,ent:0.5,sup:true,eng:0,hit:0,rest:false,tgt:0,foes:[]};
+  const u={id:G.nid++,side,type,x:clampX(x),y:clampY(y),str:100,tx:null,ty:null,path:null,ent:0.5,sup:true,eng:0,hit:0,rest:false,tgt:0,foes:[],auto:side===RED&&type==="inf"};
   G.units.push(u);return u;
 }
 function nearestCell(x,y,pred){
@@ -631,7 +639,7 @@ function step(dt){
   const dmg=new Map();
   for(const u of U){
     u.eng=u.foes.length;if(!u.eng)continue;
-    const uc=cellOf(u.x,u.y),fire=DMG*T[u.type].atk*TER[M.land[uc]].atk*(u.type==="arm"&&(M.land[uc]===1||M.land[uc]===6||M.land[uc]===5)?0.8:1)*(0.35+0.65*u.str/100)*(u.sup?1:0.55)*(M.river[uc]?0.6:1)/u.eng*dt;
+    const uc=cellOf(u.x,u.y),fire=DMG*T[u.type].atk*TER[M.land[uc]].atk*(u.type==="arm"&&(M.land[uc]===1||M.land[uc]===6||M.land[uc]===5)?0.8:1)*(0.35+0.65*u.str/100)*(u.sup?1:0.55)*(M.river[uc]?0.6:1)*(u.side===BLK?D_().fire:1)/u.eng*dt;
     if(Math.random()<dt*2)scar((u.x+u.foes[0].x)/2,(u.y+u.foes[0].y)/2,2.5*K,0.05);
     for(const v of u.foes){
       const vc=cellOf(v.x,v.y),def=(1-0.4*v.ent)*TER[M.land[vc]].def*(M.city[vc]&&M.land[vc]!==6?0.8:1)*(1-0.15*G.ter[vc])*T[v.type].def;
@@ -671,10 +679,11 @@ function step(dt){
   G.supT+=dt;if(G.supT>=0.5){G.supT=0;computeSupply();updateVP();checkEnd();}
   stepAir(dt);
   G.costT=(G.costT||0)+dt;if(G.costT>5){G.costT=0;buildCosts();}
-  G.aiAir+=dt;if(G.aiAir>=4){G.aiAir=0;aiAirOps();}
-  for(const s of [RED,BLK]){G.inc[s]+=dt*(1/30+G.vpEff[s]/2500);while(G.inc[s]>=1){G.inc[s]-=1;G.res[s]=Math.min(9,G.res[s]+1);}}
-  G.ai+=dt;if(G.ai>=2.2){G.ai=0;aiThink();}
-  G.aiArm+=dt;if(G.aiArm>=6){G.aiArm=0;aiArmor();}
+  G.aiAir+=dt;if(G.aiAir>=D_().air){G.aiAir=0;aiAirOps();}
+  for(const s of [RED,BLK]){G.inc[s]+=dt*(1/30+G.vpEff[s]/2500)*(s===BLK?D_().inc:1);while(G.inc[s]>=1){G.inc[s]-=1;G.res[s]=Math.min(9,G.res[s]+1);}}
+  G.ai+=dt;if(G.ai>=D_().think){G.ai=0;aiThink();}
+  G.aiAuto=(G.aiAuto||0)+dt;if(G.aiAuto>=2){G.aiAuto=0;autoRed();}
+  G.aiArm+=dt;if(G.aiArm>=D_().arm){G.aiArm=0;aiArmor();}
   if(G.res[BLK]>=1)aiSpendReserves(false);
 }
 function claim(){
@@ -757,8 +766,8 @@ function frontCells(side){
     const nb=[i>0?c-1:-1,i<GW-1?c+1:-1,j>0?c-GW:-1,j<GH-1?c+GW:-1];if(nb.some(n=>n>=0&&!W_[n]&&O[n]!==side))out.push(c);}
   return out;
 }
-function awayFromRed(c,dist){
-  const g=grad(c),m=Math.hypot(g[0],g[1]);const ux=m>1e-4?-g[0]/m:1,uy=m>1e-4?-g[1]/m:0;
+function awayFromRed(c,dist,s=BLK){
+  const g=grad(c),m=Math.hypot(g[0],g[1]),sg=s===RED?1:-1;const ux=m>1e-4?sg*g[0]/m:-sg,uy=m>1e-4?sg*g[1]/m:0;
   const x=clampX(cx(c)+ux*dist),y=clampY(cy(c)+uy*dist);
   return nearestCell(x,y,k=>!M.water[k])||[cx(c),cy(c)];
 }
@@ -776,7 +785,7 @@ function aiThink(){
   for(const u of mine){
     if(!u.sup){const p=nearestSupplied(u);if(p)aiOrder(u,p[0],p[1]);u.role="escape";continue;}
     if(u.rest&&u.str>80)u.rest=false;
-    if(!u.rest&&u.str<30&&u.eng)u.rest=true;
+    if(!u.rest&&u.str<30&&u.eng&&D_().rest)u.rest=true;
     if(u.rest){const near=u.foes[0];if(near){const dx=u.x-near.x,dy=u.y-near.y,d=Math.hypot(dx,dy)||1;aiOrder(u,u.x+dx/d*14*K,u.y+dy/d*14*K);}u.role="rest";continue;}
     u.role=u.garrison?"garrison":u.type==="arm"?"strike":"line";
     if(u.garrison&&hq&&Math.hypot(u.x-hq.x,u.y-hq.y)>4*K)aiOrder(u,hq.x+(u.id%2?-2.5:2.5)*K,hq.y+(u.id%2?0:2)*K);
@@ -792,6 +801,30 @@ function aiThink(){
   line.sort((a,b)=>(a.x*dx+a.y*dy)-(b.x*dx+b.y*dy));
   line.forEach((u,k)=>{const [x,y]=pts[k];const d=Math.hypot(u.x-x,u.y-y);if(d>1.5*K&&!(u.eng&&d<8*K))aiOrder(u,x,y);});
 }
+/* your own troops on auto: infantry you haven't given an order holds the front line, plugs gaps, and falls back when cut off or worn out */
+function autoRed(){
+  if(G.phase!=="battle")return;
+  const auto=G.units.filter(u=>u.side===RED&&u.auto);if(!auto.length)return;
+  FIELD=field();const line=[];
+  for(const u of auto){
+    if(!u.sup){const p=nearestSupplied(u);if(p)aiOrder(u,p[0],p[1]);continue;}
+    if(u.rest&&u.str>80)u.rest=false;
+    if(!u.rest&&u.str<30&&u.eng)u.rest=true;
+    if(u.rest){const near=u.foes[0];if(near){const dx=u.x-near.x,dy=u.y-near.y,d=Math.hypot(dx,dy)||1;aiOrder(u,u.x+dx/d*12*K,u.y+dy/d*12*K);}continue;}
+    line.push(u);}
+  if(!line.length)return;
+  // share the front with the units you are steering yourself: auto units only fill the stretches nobody covers
+  const manual=G.units.filter(u=>u.side===RED&&!u.auto);
+  const F=frontOrder(frontCells(RED).filter(c=>!manual.some(m=>Math.hypot(m.x-cx(c),m.y-cy(c))<9*K)));if(!F.length)return;
+  const blks=G.units.filter(u=>u.side===BLK);
+  const slots=[];for(let k=0;k<line.length;k++){const c=F[Math.floor((k+.5)*F.length/line.length)];
+    const open=!blks.some(b=>Math.hypot(b.x-cx(c),b.y-cy(c))<14*K);slots.push(awayFromRed(c,(open?-3:2)*K,RED));}
+  const d2=(u,q)=>Math.hypot(u.x-q[0],u.y-q[1]),as=line.map((_,k)=>k);
+  for(let pass=0,better=true;better&&pass<30;pass++){better=false;
+    for(let i=0;i<line.length;i++)for(let j=i+1;j<line.length;j++)
+      if(d2(line[i],slots[as[j]])+d2(line[j],slots[as[i]])<d2(line[i],slots[as[i]])+d2(line[j],slots[as[j]])-1e-6){[as[i],as[j]]=[as[j],as[i]];better=true;}}
+  line.forEach((u,k)=>{const [x,y]=slots[as[k]];const d=Math.hypot(u.x-x,u.y-y);if(d>1.5*K&&!(u.eng&&d<8*K))setOrder(u,x,y,dangerMask(RED,x,y));});
+}
 function aiArmor(){
   if(G.phase!=="battle")return;
   const arm=G.units.filter(u=>u.side===BLK&&u.role==="strike");if(!arm.length)return;
@@ -801,7 +834,7 @@ function aiArmor(){
   const hq=M.hq[BLK];
   const score=r=>(r.str*(r.sup?1:0.5))-(G.owner[cellOf(r.x,r.y)]===BLK?25:0)-(hq?Math.max(0,60*K-Math.hypot(r.x-hq.x,r.y-hq.y))*2/K:0)+Math.random()*15;
   const prey=reds.slice().sort((a,b)=>score(a)-score(b));
-  let k=0;for(const p of prey.slice(0,2)){for(const a of free.slice(k,k+2)){a.tgt=p.id;setOrder(a,p.x,p.y);}k+=2;if(k>=free.length)break;}
+  const n=D_().strikes;let k=0;for(const p of prey.slice(0,n)){for(const a of free.slice(k,k+2)){a.tgt=p.id;setOrder(a,p.x,p.y);}k+=2;if(k>=free.length)break;}
 }
 function aiAirOps(){
   if(G.phase!=="battle")return;
@@ -856,7 +889,7 @@ function orderAlong(lead,raw){
       if(M.water[cellOf(q[0],q[1])]){q=nearestCell(q[0],q[1],c=>!M.water[c]);if(!q)continue;}
       if(!lineClear(cur[0],cur[1],q[0],q[1])){const a=astar(cur[0],cur[1],q[0],q[1],u.type);if(a)path.push(...a);else continue;}else path.push(q);
       cur=q;}
-    if(!path.length)continue;u.path=path;[u.tx,u.ty]=path[path.length-1];u.rest=false;
+    if(!path.length)continue;u.auto=false;u.path=path;[u.tx,u.ty]=path[path.length-1];u.rest=false;
   }
   toast(`${grp.length>1?grp.length+" units follow":"Unit follows"} your route`);
 }
@@ -866,7 +899,7 @@ function orderGroup(lead,x,y){
   for(const u of grp)placeOrMove(u,x+(u.x-ox),y+(u.y-oy),dg);
 }
 function placeOrMove(u,x,y,dg){
-  x=clampX(x);y=clampY(y);
+  x=clampX(x);y=clampY(y);if(G.phase==="battle")u.auto=false;
   if(G.phase==="setup"){if(setupSafe(x,y)){u.x=x;u.y=y;}}
   else{setOrder(u,x,y,dg||dangerMask(u.side,x,y));u.rest=false;}
 }
@@ -917,7 +950,7 @@ function saveGame(silent){
     hq:M.hq.map(t=>t&&{name:t.name,x:t.x,y:t.y,c:t.c,synthetic:!!t.synthetic}),
     g:{t:G.t,phase:G.phase,owner:b64(G.owner),res:G.res,inc:G.inc,hold:G.hold,speed:G.speed,nid:G.nid,src:G.src,
        ter:b64(Uint8Array.from(G.ter,v=>Math.round(v*255))),air:G.air.map(a=>({...a})),
-       units:G.units.map(u=>({id:u.id,side:u.side,type:u.type,x:u.x,y:u.y,str:u.str,tx:u.tx,ty:u.ty,path:u.path,ent:u.ent,rest:u.rest,tgt:u.tgt,garrison:!!u.garrison}))}};
+       units:G.units.map(u=>({id:u.id,side:u.side,type:u.type,x:u.x,y:u.y,str:u.str,tx:u.tx,ty:u.ty,path:u.path,ent:u.ent,rest:u.rest,tgt:u.tgt,garrison:!!u.garrison,auto:!!u.auto})),diff:DIFF}};
   try{localStorage.setItem(SAVE_KEY,JSON.stringify(snap));if(!silent)toast("Battle saved in this browser");refreshContinue();return true;}
   catch(e){if(!silent)toast("This browser would not store the save");return false;}
 }
@@ -933,7 +966,7 @@ async function loadGame(){
     M.towns=M.towns.filter(t=>!t.synthetic);for(const t of M.towns)t.hq=-1;M.hq=[null,null];
     s.hq.forEach((h,side)=>{if(!h)return;let t=h.synthetic?null:M.towns.find(o=>o.c===h.c&&o.name===h.name);
       if(!t){t={name:h.name,x:h.x,y:h.y,c:h.c,vp:3,hq:-1,synthetic:true};M.towns.push(t);}t.hq=side;t.vp=Math.max(t.vp,3);M.hq[side]=t;M.city[t.c]=1;});
-    const g=s.g;
+    const g=s.g;if(g.diff&&DIFFS[g.diff])DIFF=g.diff;
     G={t:g.t,phase:g.phase,owner:unb64(g.owner),units:[],nid:g.nid,res:g.res,inc:g.inc,speed:g.speed,paused:true,sel:new Set(),
        fx:[],winner:null,ai:0,aiArm:0,supT:0,ownerDirty:true,sup:[new Uint8Array(NC),new Uint8Array(NC)],stamp:0,
        claimR:new Int32Array(NC),claimB:new Int32Array(NC),vp:[0,0],placing:null,hold:g.hold,src:g.src,saveT:0,
@@ -1128,6 +1161,7 @@ function drawBattle(now){
     ctx.strokeStyle=u.side===RED?"#FFD3CF":"#C8CCBE";ctx.lineWidth=Math.max(2,R*0.28);
     ctx.beginPath();ctx.arc(x,y,R*0.62,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(0,u.str)/100);ctx.stroke();
     if(u.type==="arm"){ctx.strokeStyle="#E6E9DD";ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(x,y,R*0.42,R*0.24,0,0,7);ctx.stroke();}
+    if(u.auto){const ax=x+R*0.8,ay=y-R*0.8;ctx.fillStyle="#E6E9DD";ctx.beginPath();ctx.arc(ax,ay,Math.max(2.5,R*0.3),0,7);ctx.fill();ctx.strokeStyle="#C9252C";ctx.lineWidth=1.2;ctx.stroke();}
   }
   if(gest&&gest.type==="drag"&&gest.moved){
     const lead=gest.unit;ctx.strokeStyle="#C9252C";ctx.lineWidth=2.5;
@@ -1245,7 +1279,8 @@ $("tMove").onclick=()=>setTool("move");$("tBox").onclick=()=>setTool("box");$("t
 $("bPause").onclick=()=>{G.paused=!G.paused;syncUI();};
 $("bS1").onclick=()=>setSpeed(1);$("bS2").onclick=()=>setSpeed(2);$("bS4").onclick=()=>setSpeed(4);
 $("bAll").onclick=()=>{G.sel=new Set(own().map(u=>u.id));syncUI();};
-$("bHold").onclick=()=>{for(const u of selected()){u.tx=u.ty=null;u.path=null;}syncUI();};
+$("bHold").onclick=()=>{for(const u of selected()){u.tx=u.ty=null;u.path=null;u.auto=false;}syncUI();};
+$("bAuto").onclick=()=>{const s=selected();for(const u of s)u.auto=true;if(s.length)toast(`${s.length} unit${s.length>1?"s":""} back on auto: they'll hold the front themselves`);syncUI();if(G.phase==="battle")autoRed();};
 $("bInf").onclick=()=>{G.airMode=null;G.placing=G.placing==="inf"?null:"inf";if(G.placing)toast("Tap your own ground to place infantry");syncUI();};
 $("bArm").onclick=()=>{G.airMode=null;G.placing=G.placing==="arm"?null:"arm";if(G.placing)toast("Tap your own ground to place armor");syncUI();};
 $("bSave").onclick=()=>saveGame(false);
@@ -1259,12 +1294,14 @@ $("bClose").onclick=()=>{$("brief").hidden=true;};
 $("bRestart").onclick=()=>{if(!OWN0)return;newBattle();territoryFrom(G.owner);showBrief("Deployment",null);syncUI();};
 $("bNewMap").onclick=()=>toPicker();
 $("helpbtn").onclick=()=>{if($("brief").hidden)showBrief(G.phase==="setup"?"Deployment":"Orders",null);else $("brief").hidden=true;};
+function syncDiff(){for(const b of document.querySelectorAll("#diffrow button"))b.setAttribute("aria-pressed",String(b.dataset.d===DIFF));}
+for(const b of document.querySelectorAll("#diffrow button"))b.onclick=()=>{DIFF=b.dataset.d;try{localStorage.setItem("oderfront.diff",DIFF);}catch(e){}syncDiff();};
 function showBrief(title,why){
   const h=M.hq;$("briefTitle").textContent=title;
   $("briefText").textContent=why||`${M.name}. The front runs where you drew it. You command Red; Black is run by the computer.`;
   $("winrule").textContent=`Win by taking and holding ${h[BLK]?h[BLK].name:"the Black HQ"}, or by destroying every Black division. Lose ${h[RED]?h[RED].name:"your HQ"} and you lose. Towns you hold speed up your reserves.`;
   $("briefList").hidden=!!why;
-  $("bStart").hidden=G.phase!=="setup";$("bClose").hidden=G.phase!=="battle";$("bRestart").hidden=G.phase==="setup";$("bNewMap").hidden=G.phase!=="over";
+  $("bStart").hidden=G.phase!=="setup";$("diffrow").hidden=G.phase!=="setup";syncDiff();$("bClose").hidden=G.phase!=="battle";$("bRestart").hidden=G.phase==="setup";$("bNewMap").hidden=G.phase!=="over";
   $("brief").hidden=false;
 }
 window.addEventListener("keydown",e=>{
