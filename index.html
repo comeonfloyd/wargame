@@ -479,7 +479,7 @@ const T={
   inf:{speed:1.1,atk:1.0,def:1.0,claim:4.5,cost:1,label:"Infantry"},
   arm:{speed:1.9,atk:1.75,def:0.85,claim:4.0,cost:2,label:"Armor"}
 };
-const HQ_HOLD=25,ENGAGE=6.5,CONTACT=3.4,DMG=1.5,MAXUNITS=40;
+const HQ_HOLD=25,ENGAGE=6.5,CONTACT=3.4,DMG=1.5,MAXUNITS=60;
 /* air wings: distances in km (scaled by K), times in game seconds */
 const AIR={speed:14,strikeR:6,strikeT:4,strikeDmg:9,aa:1.0,coverR:22,coverT:35,rearm:20,cost:3,max:5};
 let G=null,FIELD=null;
@@ -494,7 +494,7 @@ function newBattle(){
   FIELD=field();
   const P=extendToEdges(FRONT),seg=[0];for(let k=1;k<P.length;k++)seg.push(seg[k-1]+Math.hypot(P[k][0]-P[k-1][0],P[k][1]-P[k-1][1]));
   const len=seg[seg.length-1],at=d=>{let s=1;while(s<seg.length-1&&seg[s]<d)s++;const t=(d-seg[s-1])/((seg[s]-seg[s-1])||1);return [P[s-1][0]+(P[s][0]-P[s-1][0])*t,P[s-1][1]+(P[s][1]-P[s-1][1])*t];};
-  const nInf=clamp(Math.round(len/K/27),6,14),nArm=Math.max(2,Math.round(nInf*0.4));
+  const nInf=clamp(Math.round(len/K/14),10,26),nArm=Math.max(4,Math.round(nInf*0.4));
   for(const s of [RED,BLK]){
     for(let k=0;k<nInf;k++){const p=at((k+.5)/nInf*len),q=intoSide(p[0],p[1],s,4*K);if(q)addUnit(s,"inf",q[0],q[1]);}
     for(let k=0;k<nArm;k++){const p=at((k+.5)/nArm*len),q=intoSide(p[0],p[1],s,26*K);if(q)addUnit(s,"arm",q[0],q[1]);}
