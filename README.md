@@ -17,7 +17,8 @@ With GitHub Pages turned on for this repository, it is playable at `https://come
 - World map picker with city search and presets (Leszno–Wrocław sketch, Ardennes, Normandy, Kursk, Korea, Virginia), or upload any map image (blue = water, darker green = forest, beige/grey = city).
 - Draw the opening front freehand; swap sides.
 - Infantry and armor divisions take ground around them; front lines redraw live. Encircled troops lose strength; empty pockets collapse.
-- Easy / Normal / Hard opponent. Infantry you haven't ordered is on Auto and holds the front by itself; press Auto to hand units back.
+- Easy / Normal / Hard opponent.
+- Dig in (D): units build trench lines across the front that cut the damage they take and slow attackers. Fighting and bombing wreck them.
 - Terrain: open, forest, hills, mountains, dry ground, marsh, cities, rivers and roads, each changing speed and combat. Roads give a fast road march.
 - Orders route around water, rough ground and enemy troops; drag in a curve to give a hand-drawn route.
 - Air wings: bombing strikes and fighter cover. Fighting and bombing scar the ground.
